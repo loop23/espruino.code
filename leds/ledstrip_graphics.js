@@ -1,8 +1,9 @@
-/* Striscia di led - versione multipattern e 
-che da un certo momento in poi ha usato Graphics */
+/* The wanna-be-cool lamp code */
 SPI2.setup({baud:3200000 , mosi:B15});
-var WIDTH = 3;
-var HEIGHT = 3;
+var WIDTH = 5;
+var HEIGHT = 5;
+var PSIZE = WIDTH * HEIGHT;
+
 var g = Graphics.createArrayBuffer(WIDTH,
                                    HEIGHT,
                                    24, { zigzag: true });
@@ -12,15 +13,28 @@ var gswap = Graphics.createArrayBuffer(WIDTH,
 var patterns = [];
 var tick = 0;
 
-// A random integer betwen min and max, taken from mdn
-function getRandomInt(min, max) {
-  return Math.floor(Math.random() * (max - min)) + min;
+// Returns color wheel thing based on wpos (0..255)
+function wheel(wpos) {
+  if (wpos < 86) {
+    return (wpos * 3) + ((256 - wpos * 3) << 8) + (0 << 16);
+  } else if (wpos < 170) {
+    return (255 - wpos * 3) + (0 << 8) + (wpos * 3 << 16);
+  } else {
+    return 0 + (wpos * 3 << 8) + ((255 - wpos * 3) << 16);
+  }
 }
 
+// A random integer betwen min and max, taken from mdn
+function getRandomInt(min, max) {
+  max++;
+  return Math.floor(Math.random() * (max - min)) + min;
+}
+// A pattern is what this thing does; Has optional init, if set does that
+// upon switching instead of clearing etc.
 function Pattern(name, period, fun, init) {
   this.name = name;
   this.period = period;
-  this.init = init || function() {};
+  this.init = init;
   this.f = fun;
 }
 
@@ -28,10 +42,12 @@ function addPattern(pat) {
   patterns.push(pat);
   console.log("Added pattern: " + pat.name);
 }
+
 // Probably, red, green, blue
-var mcolors = [255, 255<<8, 255<<16];
+var mcolors = [255, 255<<8, 255<<16, 37373737, 637373731];
+// Does a random rectangle
 function rndRect() {
-  g.setColor(mcolors[getRandomInt(0,3)]);
+  g.setColor(mcolors[getRandomInt(0,mcolors.length - 1)]);
   g.fillRect(getRandomInt(0,WIDTH),
              getRandomInt(0,HEIGHT),
              getRandomInt(0,WIDTH),
@@ -65,7 +81,7 @@ function Lfo(period, phase) {
 
 // Moltiplica il risultato di fun in modo da ottenera una cosa fra in e max; Davvero?
 function Range(fun, min, max) {
-  var mid = (max - min) / 2;
+  var mid = Math.abs((max - min)) / 2;
   return function() {
     return fun() * mid + mid;
   };
@@ -110,7 +126,7 @@ function bluePx(x,y) {
                   Math.floor(255 - (dist(x,y,m[0],m[1])* 200 )));
 }
 
-function HSVtoRGB(h, s, v) {
+/*function HSVtoRGB(h, s, v) {
     var r, g, b, i, f, p, q, t;
     if (h && s === undefined && v === undefined) {
         s = h.s, v = h.v, h = h.h;
@@ -132,8 +148,10 @@ function HSVtoRGB(h, s, v) {
            Math.floor(g * 255) << 8 |
            Math.floor(b * 255) << 16;
 }
+*/
 
-var lfor11 = new Range(new Lfo(300), 0, 1);
+var lfor11 = new Range(new Lfo(300, Math.PI), 0, 1);
+var lfor112 = new Range(new Lfo(50), -5, WIDTH + 1);
 var lfor12 = new Range(new Lfo(100,Math.PI/8), 0, 1);
 var lfor13 = new Range(new Lfo(100,Math.PI/4), 0, 1);
 var lfor14 = new Range(new Lfo(100), 1, 3);
@@ -141,11 +159,13 @@ var lfor14 = new Range(new Lfo(100), 1, 3);
 
 addPattern(
   new Pattern("lines",
-    130,
+    30,
     function() {
-      pos = tick % 3;
-      g.setBgColorHSV(lfor11(), 1, 0.9);
-      g.drawLine(0, pos, 2, pos);
+      pos = lfor112();
+      for (i = 0; i< WIDTH; i++) {
+        g.setColorHSV(lfor11() * 255, 1, 1 - (Math.abs(i - pos)));
+        g.drawLine(0, i, HEIGHT, i);
+      }
     },
     function() {
       g.setBgColor(getRandomInt(0, 255),
@@ -159,7 +179,7 @@ addPattern(new Pattern("cylon", 10, function() {
 
 addPattern(new Pattern("SoftPx", 1,
   function() {
-    g.setBgColor(grey(lfor1()));
+    g.setBgColor(grey(lfor1()/5));
 }));
 
 // Does three big pixels that mix colors when overlapping
@@ -350,7 +370,7 @@ function cp() { changePattern(); }
 function loop() {
   g.clear();
   runPattern();
-  SPI2.send4bit(g.buffer, 1, 3);
+  draw();
   tick++;
   schedule();
 }
