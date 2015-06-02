@@ -1,3 +1,4 @@
+// Some sort of 8 step sequencer for the SpeakJet chip
 var s = Serial1;
 s.setup(9600, { tx: B6 });
 
@@ -120,4 +121,3 @@ function play() {
 }
 
 var pi = setInterval(play, 3000);
-

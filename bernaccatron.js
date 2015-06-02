@@ -1,7 +1,10 @@
-/* Js code for a bernaccatron; The idea is to map Weather data to
+/*
+Code for a "bernaccatron"; The idea is to map Weather data to
 pixel status, so that a single glance allows the user to figure out
 what the weather is going to be like in the next two days; This is useful
-to figure out wether to take an umbrella, or completely avoid a trip */
+to figure out wether to take an umbrella, or completely avoid a trip.
+Work in progress, still needs to fetch data from OpenWeather and drive the leds.
+*/
 
 var One = {
   "dt": 1416344400,
@@ -79,4 +82,3 @@ function upd() {
 
 g.setPixel(0,0,255);
 upd();
-

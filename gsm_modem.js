@@ -1,3 +1,5 @@
+// Probably stolen from http://forum.espruino.com/conversations/1712/
+
 var cmd="";
 var global_response=0;
 var answer="OK";
@@ -65,7 +67,7 @@ function Set_SMS_Mode() {
 //Set the SMS number to send text message to
 function Set_SMS_Number() {
   answer=">";
-  console.log("Setting Phone Number.."); 
+  console.log("Setting Phone Number..");
   Send_Command('AT+CMGS=\"+393458760331\"\r',1000,function(){Send_SMS();});
 }
 

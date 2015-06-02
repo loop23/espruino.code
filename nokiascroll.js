@@ -1,3 +1,5 @@
+// Scrolls some italian swearings on a nokia display on serial2
+
 s = Serial2;
 s.setup(115200, { parity:'none', bytesize:8, stopbits:1 });
 s.onData(function(d) {
@@ -9,7 +11,6 @@ s.onData(function(d) {
     print("Other: " + data.toString(16) + ' ' + data);
   }
 });
-
 
 SPI1.setup({ sck:B3, mosi:B5, baud: 2 * 1000 * 1000 });
 var g = require("PCD8544").connect(SPI1,B6,B7,B8, function() {
