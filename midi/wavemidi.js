@@ -1,3 +1,4 @@
+// Reads midi and plays a sawtoot. At least it tries, I don't think it works
 var midi = require('Midi').setup(Serial2, 115200);
 var out = A0;
 var wsize = 256;
@@ -26,5 +27,5 @@ midi.on('noteOn', function(i) {
 
 midi.on('noteOff', function(i) {
    console.log("Noteoff,stopping");
-   wave.stop(); 
+   wave.stop();
 });

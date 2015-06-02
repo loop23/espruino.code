@@ -1,27 +1,5 @@
-function Encoder(/*=PIN*/pina, /*=PIN*/pinb, callback) {
-  this.last = 0;
-  this.PINA = pina;
-  this.PINB = pinb;
-  this.callback = callback;
-  var encoder = this;
-  var onChange = function() {
-    var a = digitalRead(encoder.PINA);
-    var b = digitalRead(encoder.PINB);
-    var s = 0;
-    switch (this.last) {
-      case 0b00 : if (a) s++; if (b) s--; break;
-      case 0b01 : if (!a) s--; if (b) s++; break;
-      case 0b10 : if (a) s--; if (!b) s++; break;
-      case 0b11 : if (!a) s++; if (!b) s--; break;
-    }
-    this.last = a | (b<<1);
-    if (s!==0) callback(s);
-  };
-  pinMode(this.PINA, "input_pulldown");
-  pinMode(this.PINB, "input_pulldown");
-  setWatch(onChange, this.PINA, { repeat: true });
-  setWatch(onChange, this.PINB, { repeat: true });
-}
+// Synthesizer thing with SpeakJet. Needs work, and I must work out if it does
+// something different/worthwhile from speakjet.js
 var retriggering = false;
 var s = Serial1;
 var leds = [C3,C2,C0,C15,B12,B9,B7,B6,B4,B3];

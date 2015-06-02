@@ -1,9 +1,13 @@
-var PSIZE = 25;
+// Draws a single point changing color, and does a white flash once in a while.
+// I sort of like the effect, I may port it into the lamp code.
+// Has color wheel ported from some arduino code I saw online;
+// Uses old hand made interface to drive leds.
+var PSIZE = 9;
 var cols = new Uint8Array(PSIZE*3);
 var wheelpos = 0,
     pos = 0;
 
-SPI1.setup({baud:3200000});
+SPI2.setup({baud:3200000 , mosi:B15});
 
 function Color(r,g,b) {
   this.r = r;
@@ -11,17 +15,6 @@ function Color(r,g,b) {
   this.b = b;
 }
 var gCol = new Color(0,0,0);
-
-Color.prototype.darken = function(amt) {
-  this.r = (Math.max(this.r - amt,0));
-  this.g = (Math.max(this.g - amt,0));
-  this.b = (Math.max(this.b - amt,0));
-};
-Color.prototype.lighten = function(amt) {
-  this.r = (Math.min(this.r + amt,255));
-  this.g = (Math.min(this.g + amt,255));
-  this.b = (Math.min(this.b + amt,255));
-};
 
 function setPixelColor(p, c) {
   p=p*3;
@@ -46,7 +39,7 @@ function wheel(wpos) {
   }
 }
 
-function row(r,c) { 
+function row(r,c) {
   for (var i = r*5; i< r*5 + 5; i++) {
     setPixelColor(i, c);
   }
@@ -54,19 +47,19 @@ function row(r,c) {
 
 var white = new Color(255,255,255);
 
-function rndrow() { 
-  var whatrow = Math.round(Math.random() * 5); 
-  row(whatrow, white); 
+function rndrow() {
+  var whatrow = Math.round(Math.random() * 5);
+  row(whatrow, white);
   show();
 }
 
 var black = new Color(0,0,0);
 function useWheel() {
   if (pos>=PSIZE) pos=0;
-  if (wheelpos === 254) wheelpos = 0;
+  if (wheelpos === 255) wheelpos = 0;
   wheel(wheelpos);
   setPixelColor(pos, gCol);
-  setPixelColor(pos -1 < 0 ? 24: pos -1, black); 
+  setPixelColor(pos -1 < 0 ? 8: pos -1, black);
   pos +=1;
   wheelpos +=1;
 }
@@ -95,7 +88,7 @@ function colorWipe(color) {
 }
 
 function show() {
-  SPI1.send4bit(cols, 0b0001, 0b0011);
+  SPI2.send4bit(cols, 0b0001, 0b0011);
 }
 
 function doLights() {
@@ -106,6 +99,6 @@ function doLights() {
 function flash() {
   resetCols(white);
 }
-
-setInterval(doLights, 10);
-setInterval(flash, 10 * 25 * 4);
+var tc = 100;
+setInterval(doLights, tc);
+setInterval(flash, 2 * PSIZE * tc);

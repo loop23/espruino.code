@@ -1,3 +1,5 @@
+// Reality check. Blinks the red led.
+
 clearInterval();
 
 var  l = false;
