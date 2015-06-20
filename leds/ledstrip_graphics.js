@@ -1,5 +1,5 @@
 /* The wanna-be-cool lamp code */
-SPI2.setup({baud:3200000 , mosi:B15});
+SPI1.setup({baud:3200000 , mosi:A7});
 var WIDTH = 5;
 var HEIGHT = 5;
 var PSIZE = WIDTH * HEIGHT;
@@ -44,7 +44,7 @@ function addPattern(pat) {
 }
 
 // Probably, red, green, blue
-var mcolors = [255, 255<<8, 255<<16, 37373737, 637373731];
+var mcolors = [255, 255<<8, 255<<16, 37373737, 637373731, 100*255+20+100*64000];
 // Does a random rectangle
 function rndRect() {
   g.setColor(mcolors[getRandomInt(0,mcolors.length - 1)]);
@@ -54,11 +54,11 @@ function rndRect() {
              getRandomInt(0,HEIGHT));
 }
 
-// A grey at this level!
+// A grey at this level - expects 0-255
 function grey(level) {
   return level | (level << 8) | (level << 16);
 }
-
+// A yellow at this level - expect 0-255
 function yellow(level) {
   return level | level << 8;
 }
@@ -150,20 +150,110 @@ function bluePx(x,y) {
 }
 */
 
-var lfor11 = new Range(new Lfo(300, Math.PI), 0, 1);
-var lfor112 = new Range(new Lfo(50), -5, WIDTH + 1);
+var lfor11 = new Range(new Lfo(3000, Math.PI), 0, 1);
+var lfor112 = new Range(new Lfo(25000), -4, 0);
 var lfor12 = new Range(new Lfo(100,Math.PI/8), 0, 1);
 var lfor13 = new Range(new Lfo(100,Math.PI/4), 0, 1);
 var lfor14 = new Range(new Lfo(100), 1, 3);
 
+var lform1 = new Range(new Lfo(1000), 0, 1);
+var lform2 = new Range(new Lfo(1000, Math.PI), 0, 1);
+
+addPattern(
+  new Pattern("TextEr",
+    20,
+    function() {
+      var str = "DIO CANE BAFANGULO PORCODIO";
+      g.setColorHSV(Math.round(lform1() * 255), 1, 1);
+      g.setBgColorHSV(Math.round(lform2() * 255), 1, 1);
+      g.clear();
+      var idx = Math.round((tick/30)) % str.length;
+      g.drawString(str[idx], 0,0);
+    },
+    function() {
+      g.setFontVector(5);
+    }
+  )
+);
+
+addPattern(
+  new Pattern("just-on",
+    100,
+    function() {
+       var o = g.getBgColor() + 1;
+      g.setBgColor(o,o,o);
+      g.clear();
+    }
+));
+
+addPattern(
+  new Pattern("mlines",
+    1,
+    function() {
+      var cnt = tick%25;
+      g.setPixel(cnt/5, cnt%5, lform1() * 255*2*133.3);
+  }
+));
+
+addPattern(
+  new Pattern("mesme",
+    10,
+    function() {
+      for(i=0; i<WIDTH;i++) {
+        if (i%2) {
+          g.setColorHSV(lform1() * 255, lfo2() + 1,lfo1()+1.5);
+        } else {
+          g.setColorHSV(lform2() * 255, lfo1() + 1,lfo2()+1.5);
+        }
+       g.drawLine(i,0,i,HEIGHT);
+      }
+    },
+    function() { return true; }
+));
+
+addPattern(
+  new Pattern("mesme2",
+    10,
+    function() {
+      for(i=0; i<HEIGHT;i++) {
+        if (i%2) {
+          g.setColorHSV(lform1() * 255, 1,1);
+        } else {
+          g.setColorHSV(lform2() * 255, 1,1);
+        }
+       g.drawLine(0,i,WIDTH,i);
+      }
+    },
+    function() { return true; }
+));
+
+addPattern(
+  new Pattern("mesme3",
+    1,
+    function() {
+      for(i=0; i<HEIGHT;i++) {
+        for(j=0; j<WIDTH;j++) {
+          if ((i+j)%2) {
+            g.setColorHSV(lform1() * 255, 1,1);
+          } else {
+            g.setColorHSV(lform2() * 255, 1,1);
+          }
+          g.drawLine(i,j,i,j);
+        }
+      }
+    },
+    function() { return true; }
+));
+
+
 
 addPattern(
   new Pattern("lines",
-    30,
+    1,
     function() {
       pos = lfor112();
       for (i = 0; i< WIDTH; i++) {
-        g.setColorHSV(lfor11() * 255, 1, 1 - (Math.abs(i - pos)));
+        g.setColorHSV(lfor11() * 255, 1, 1.5 - (Math.abs(i - pos)));
         g.drawLine(0, i, HEIGHT, i);
       }
     },
@@ -182,10 +272,10 @@ addPattern(new Pattern("SoftPx", 1,
     g.setBgColor(grey(lfor1()/5));
 }));
 
-// Does three big pixels that mix colors when overlapping
+// Does a square that changes color slowly.
 addPattern(new Pattern('distorG', 30,
   function() {
-    g.setColor(mcolors[getRandomInt(0,3)]);
+    g.setColorHSV(lfor11() * 255, 1, 1);
     var m = pt1();
     var x = m[0];
     var y = m[1];
@@ -196,12 +286,10 @@ addPattern(new Pattern('distorG', 30,
 addPattern(new Pattern("Randvar", 30, function() {
   var onx = getRandomInt(0,WIDTH);
   g.setColor(255);
-  g.drawLine(onx, 0, onx, 0);
-  if (HEIGHT > 0) {
-    var ony = getRandomInt(0,HEIGHT);
-    g.setColor(255<<8);
-    g.drawLine(0, ony, WIDTH, ony);
-  }
+  g.drawLine(onx, 0, onx, HEIGHT);
+  var ony = getRandomInt(0,HEIGHT);
+  g.setColor(255<<8);
+  g.drawLine(0, ony, WIDTH, ony);
 }));
 
 addPattern(new Pattern("RandomCross", 1, function() {
@@ -235,22 +323,18 @@ addPattern(new Pattern("Mondrian", 5000, function() {
 
 // Does three big pixels that mix colors when overlapping
 addPattern(new Pattern('distor', 10, function() {
-  //var ts = getTime();
   for (var y=0; y < HEIGHT; y++) {
     for (var x=0; x < WIDTH; x++)
       g.setPixel(x,
                  y,
                  redPx(x,y) | greenPx(x,y) << 8 | bluePx(x, y) << 16);
   }
-  //console.log("T: " + (getTime() - ts));
 }));
 
 addPattern(new Pattern('Candle', 1, function() {
   for (var y=0; y < HEIGHT; y++) {
     for (var x=0; x < WIDTH; x++) {
-      var val = (g.getPixel(x,y) & 0xff) +
-          Math.random() * 20 - 10;
-      val = (val > 255) ? val : (val < 0) ? 0 : val;
+      var val = (g.getPixel(x,y) + (Math.random()-1));
       g.setPixel(x,y,yellow(val));
     }
   }
@@ -346,7 +430,7 @@ function changePattern() {
               patN,
               patterns[patN].name);
   clearInterval();
-  g.clear();
+  //g.clear();
   if (patterns[patN].init) {
     console.log("Custom init!");
     patterns[patN].init();
@@ -368,7 +452,7 @@ setWatch(changePattern, BTN, { repeat: true, edge:'falling' });
 function cp() { changePattern(); }
 
 function loop() {
-  g.clear();
+//  g.clear();
   runPattern();
   draw();
   tick++;
@@ -376,7 +460,7 @@ function loop() {
 }
 
 function draw() {
-  SPI2.send4bit(g.buffer, 0b0001, 0b0011);
+  SPI1.send4bit(g.buffer, 0b0001, 0b0011);
 }
 
 function schedule() {
