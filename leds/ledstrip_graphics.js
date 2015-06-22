@@ -6,7 +6,7 @@ var PSIZE = WIDTH * HEIGHT;
 
 var g = Graphics.createArrayBuffer(WIDTH,
                                    HEIGHT,
-                                   24, { zigzag: true });
+                                   24, { zigzag: false });
 var gswap = Graphics.createArrayBuffer(WIDTH,
                                        HEIGHT,
                                        24, { zigzag: true });
@@ -45,7 +45,7 @@ function addPattern(pat) {
 
 // Probably, red, green, blue
 var mcolors = [255, 255<<8, 255<<16, 37373737, 637373731, 100*255+20+100*64000];
-// Does a random rectangle
+// Does a random rectangle in one of the above colors
 function rndRect() {
   g.setColor(mcolors[getRandomInt(0,mcolors.length - 1)]);
   g.fillRect(getRandomInt(0,WIDTH),
@@ -79,6 +79,12 @@ function Lfo(period, phase) {
   };
 }
 
+function Oscil(period, phase) {
+  if (!phase) phase = 0;
+  return function(theta) {
+    return Math.sin((tick/10 + theta) * ((2*Math.PI)/period) + phase);
+  };
+}
 // Moltiplica il risultato di fun in modo da ottenera una cosa fra in e max; Davvero?
 function Range(fun, min, max) {
   var mid = Math.abs((max - min)) / 2;
@@ -158,6 +164,22 @@ var lfor14 = new Range(new Lfo(100), 1, 3);
 
 var lform1 = new Range(new Lfo(1000), 0, 1);
 var lform2 = new Range(new Lfo(1000, Math.PI), 0, 1);
+var osc1 = new Oscil(7);
+var osc2 = new Oscil(11);
+var osc3 = new Oscil(23);
+
+addPattern(
+  new Pattern("Sinusite",
+    1,
+    function() {
+    for (i=0; i<WIDTH*HEIGHT;i++) {
+      var ri = i*3;
+      g.buffer[ri  ] = (osc1(i) + 1 ) * 32;
+      g.buffer[ri+1] = (osc2(i) + 1 ) * 127;
+      g.buffer[ri+2] = (osc3(i) + 1 ) * 127;
+    }
+  })
+);
 
 addPattern(
   new Pattern("TextEr",
