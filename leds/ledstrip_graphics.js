@@ -6,7 +6,7 @@ var PSIZE = WIDTH * HEIGHT;
 
 var g = Graphics.createArrayBuffer(WIDTH,
                                    HEIGHT,
-                                   24, { zigzag: false });
+                                   24, { zigzag: true });
 var gswap = Graphics.createArrayBuffer(WIDTH,
                                        HEIGHT,
                                        24, { zigzag: true });
@@ -82,6 +82,7 @@ function Lfo(period, phase) {
 function Oscil(period, phase) {
   if (!phase) phase = 0;
   return function(theta) {
+    "compiled";
     return Math.sin((tick/10 + theta) * ((2*Math.PI)/period) + phase);
   };
 }
@@ -89,6 +90,7 @@ function Oscil(period, phase) {
 function Range(fun, min, max) {
   var mid = Math.abs((max - min)) / 2;
   return function() {
+    "compiled";
     return fun() * mid + mid;
   };
 }
@@ -100,6 +102,7 @@ function MovingPoint() {
   var dx = (Math.random() - 0.5) / 10;
   var dy = (Math.random() - 0.5) / 10;
   return function() {
+    "compiled";
     if ((x + dx) > 4 || (x + dx) < 0) { dx = -dx; }
     if ((y + dy) > 4 || (y + dy) < 0) { dy = -dy; }
     x = x + dx;
@@ -212,6 +215,7 @@ addPattern(
   new Pattern("mlines",
     1,
     function() {
+      "compiled";
       var cnt = tick%25;
       g.setPixel(cnt/5, cnt%5, lform1() * 255*2*133.3);
   }
@@ -221,6 +225,7 @@ addPattern(
   new Pattern("mesme",
     10,
     function() {
+      "compiled";
       for(i=0; i<WIDTH;i++) {
         if (i%2) {
           g.setColorHSV(lform1() * 255, lfo2() + 1,lfo1()+1.5);
@@ -253,7 +258,8 @@ addPattern(
   new Pattern("mesme3",
     1,
     function() {
-      for(i=0; i<HEIGHT;i++) {
+     "compiled";
+     for(i=0; i<HEIGHT;i++) {
         for(j=0; j<WIDTH;j++) {
           if ((i+j)%2) {
             g.setColorHSV(lform1() * 255, 1,1);
@@ -273,6 +279,7 @@ addPattern(
   new Pattern("lines",
     1,
     function() {
+      "compiled";
       pos = lfor112();
       for (i = 0; i< WIDTH; i++) {
         g.setColorHSV(lfor11() * 255, 1, 1.5 - (Math.abs(i - pos)));
@@ -286,17 +293,20 @@ addPattern(
 ));
 
 addPattern(new Pattern("cylon", 10, function() {
-  g.setBgColorHSV(lfor11(), 1,1);
+  g.setBgColorHSV(lfor11()*255, 1,1);
+  g.clear();
 }));
 
 addPattern(new Pattern("SoftPx", 1,
   function() {
     g.setBgColor(grey(lfor1()/5));
+    g.clear();
 }));
 
 // Does a square that changes color slowly.
 addPattern(new Pattern('distorG', 30,
   function() {
+    g.clear();
     g.setColorHSV(lfor11() * 255, 1, 1);
     var m = pt1();
     var x = m[0];
