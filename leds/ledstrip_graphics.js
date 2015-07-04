@@ -65,6 +65,7 @@ function yellow(level) {
 
 // 2d distance
 function dist(x1,y1,x2,y2) {
+//  "compiled";
   return Math.sqrt(Math.pow(x2-x1,2) +
                    Math.pow(y2-y1,2));
 }
@@ -75,6 +76,7 @@ function dist(x1,y1,x2,y2) {
 function Lfo(period, phase) {
   if (!phase) phase = 0;
   return function() {
+    "compiled";
     return Math.sin(tick * ( (2*Math.PI)/period) + phase);
   };
 }
@@ -99,12 +101,14 @@ function Range(fun, min, max) {
 function MovingPoint() {
   var x = getRandomInt(0,4);
   var y = getRandomInt(0,4);
-  var dx = (Math.random() - 0.5) / 10;
-  var dy = (Math.random() - 0.5) / 10;
+  var dx = (Math.random() - 0.5) / 100;
+  var dy = (Math.random() - 0.5) / 100;
   return function() {
     "compiled";
-    if ((x + dx) > 4 || (x + dx) < 0) { dx = -dx; }
-    if ((y + dy) > 4 || (y + dy) < 0) { dy = -dy; }
+    var nx = x+dx;
+    var ny = y+dy;
+    if ((nx) > 4 || (nx) < 0) { dx = -dx; }
+    if ((ny) > 4 || (ny) < 0) { dy = -dy; }
     x = x + dx;
     y = y + dy;
     return [x,y];
@@ -120,19 +124,34 @@ var pt3 = new MovingPoint();
 
 //valore del rosso a x,y
 function redPx(x,y) {
+  "compiled";
   var m = pt1();
-  return Math.max(0,
-                  Math.floor(255 - (dist(x,y,m[0],m[1]) * 200)));
+  var v = 255 - (dist(x,y,m[0],m[1]) * 100.0);
+  if (v < 0) return 0;
+  return v;
 }
 function greenPx(x,y) {
+  "compiled";
   var m = pt2();
-  return Math.max(0,
-                  Math.floor(255 - (dist(x,y,m[0],m[1])* 200 )));
+  var v = 255 - (dist(x,y,m[0],m[1]) * 100.0);
+  if (v < 0) return 0;
+  return v;
 }
 function bluePx(x,y) {
+  "compiled";
   var m = pt3();
-  return Math.max(0,
-                  Math.floor(255 - (dist(x,y,m[0],m[1])* 200 )));
+  var v = 255 - (dist(x,y,m[0],m[1]) * 100.0);
+  if (v < 0) return 0;
+  return v;
+}
+// Returns a function that goes from 0 to 1.0
+// in [int] cycles
+function Phasor(cycles) {
+  var divisor = 1.0/cycles;
+  return function() {
+    "compiled";
+    return (tick % cycles) * divisor;
+  };
 }
 
 /*function HSVtoRGB(h, s, v) {
@@ -170,6 +189,36 @@ var lform2 = new Range(new Lfo(1000, Math.PI), 0, 1);
 var osc1 = new Oscil(7);
 var osc2 = new Oscil(11);
 var osc3 = new Oscil(23);
+var osc4 = new Oscil(10000);
+var pha1 = new Phasor(1000);
+addPattern(
+  new Pattern("gradients",
+   1,
+    function() {
+      "compiled";
+      for (var x=0; x< WIDTH; x++) {
+        for (var y=0; y< HEIGHT; y++) {
+          var pv = pha1()*255;
+          g.setColorHSV(pv, 1,1);
+          g.drawRect(x,y,x,y);
+        }
+      }
+    }
+  )
+);
+
+addPattern(
+  new Pattern("Bars",
+    10,
+    function() {
+      for(var i=0; i<WIDTH; i++) {
+        g.setColor(grey((Math.sin(tick / i / Math.PI)+1)* 127));
+        g.drawLine(i,0,i,HEIGHT);
+      }
+    }
+  )
+);
+
 
 addPattern(
   new Pattern("Sinusite",
@@ -177,7 +226,7 @@ addPattern(
     function() {
     for (i=0; i<WIDTH*HEIGHT;i++) {
       var ri = i*3;
-      g.buffer[ri  ] = (osc1(i) + 1 ) * 32;
+      g.buffer[ri  ] = (osc1(i) + 1 ) * 127;
       g.buffer[ri+1] = (osc2(i) + 1 ) * 127;
       g.buffer[ri+2] = (osc3(i) + 1 ) * 127;
     }
@@ -196,7 +245,7 @@ addPattern(
       g.drawString(str[idx], 0,0);
     },
     function() {
-      g.setFontVector(5);
+      //g.setFontVector(5);
     }
   )
 );
@@ -307,11 +356,13 @@ addPattern(new Pattern("SoftPx", 1,
 addPattern(new Pattern('distorG', 30,
   function() {
     g.clear();
-    g.setColorHSV(lfor11() * 255, 1, 1);
     var m = pt1();
     var x = m[0];
     var y = m[1];
-    g.fillRect(x-1,y-1, x+1, y+1);
+    g.setColorHSV((1 - lfor11()) * 255, 1, 0.5);
+    g.fillRect(x-1, y-1, x+1, y+1);
+    g.setColorHSV(lfor11() * 255, 1, 1);
+    g.fillRect(x ,y , x , y);
 }));
 
 // Tipo randomcross ma con drawLine.. molto piu' veloce!
@@ -346,7 +397,7 @@ addPattern(new Pattern("RandomCross", 1, function() {
 }));
 
 // Ogni 100 iter fa 4 rects random
-addPattern(new Pattern("Mondrian", 5000, function() {
+addPattern(new Pattern("Mondrian", 500, function() {
   g.setBgColor(mcolors[getRandomInt(0,3)]);
   for (var i=0; i < 5; i++) {
     rndRect();
@@ -354,12 +405,15 @@ addPattern(new Pattern("Mondrian", 5000, function() {
 }));
 
 // Does three big pixels that mix colors when overlapping
-addPattern(new Pattern('distor', 10, function() {
+addPattern(new Pattern('distor', 1, function() {
+  "compiled";
   for (var y=0; y < HEIGHT; y++) {
     for (var x=0; x < WIDTH; x++)
       g.setPixel(x,
                  y,
-                 redPx(x,y) | greenPx(x,y) << 8 | bluePx(x, y) << 16);
+                 redPx(x,y) |
+                 greenPx(x,y) << 8 |
+                 bluePx(x, y) << 16);
   }
 }));
 
@@ -455,9 +509,13 @@ function runPattern() {
   patterns[patN].f();
 }
 
-function changePattern() {
+function changePattern(p) {
   clearTimeout();
-  patN = (patN + 1) % patterns.length;
+  if (p) {
+    patN = p;
+  } else {
+    patN = (patN + 1) % patterns.length;
+  }
   console.log("Selecting pattern %i: %s",
               patN,
               patterns[patN].name);
@@ -481,7 +539,7 @@ function changePattern() {
 }
 
 setWatch(changePattern, BTN, { repeat: true, edge:'falling' });
-function cp() { changePattern(); }
+function cp(p) { changePattern(p); }
 
 function loop() {
 //  g.clear();
