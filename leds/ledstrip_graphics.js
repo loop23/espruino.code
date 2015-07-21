@@ -7,6 +7,8 @@ var PSIZE = WIDTH * HEIGHT;
 var g = Graphics.createArrayBuffer(WIDTH,
                                    HEIGHT,
                                    24, { zigzag: true });
+g.flip = function() { SPI1.send4bit(g.buffer, 0b0001, 0b0011); };
+
 var gswap = Graphics.createArrayBuffer(WIDTH,
                                        HEIGHT,
                                        24, { zigzag: true });
@@ -198,7 +200,7 @@ addPattern(
       "compiled";
       for (var x=0; x< WIDTH; x++) {
         for (var y=0; y< HEIGHT; y++) {
-          var pv = pha1()*255;
+          var pv = pha1()*360;
           g.setColorHSV(pv, 1,1);
           g.drawRect(x,y,x,y);
         }
@@ -238,8 +240,8 @@ addPattern(
     20,
     function() {
       var str = "DIO CANE BAFANGULO PORCODIO";
-      g.setColorHSV(Math.round(lform1() * 255), 1, 1);
-      g.setBgColorHSV(Math.round(lform2() * 255), 1, 1);
+      g.setColorHSV(Math.round(lform1() * 360), 1, 1);
+      g.setBgColorHSV(Math.round(lform2() * 360), 1, 1);
       g.clear();
       var idx = Math.round((tick/30)) % str.length;
       g.drawString(str[idx], 0,0);
@@ -277,9 +279,9 @@ addPattern(
       "compiled";
       for(i=0; i<WIDTH;i++) {
         if (i%2) {
-          g.setColorHSV(lform1() * 255, lfo2() + 1,lfo1()+1.5);
+          g.setColorHSV(lform1() * 360, lfo2() + 1,lfo1()+1.5);
         } else {
-          g.setColorHSV(lform2() * 255, lfo1() + 1,lfo2()+1.5);
+          g.setColorHSV(lform2() * 360, lfo1() + 1,lfo2()+1.5);
         }
        g.drawLine(i,0,i,HEIGHT);
       }
@@ -293,9 +295,9 @@ addPattern(
     function() {
       for(i=0; i<HEIGHT;i++) {
         if (i%2) {
-          g.setColorHSV(lform1() * 255, 1,1);
+          g.setColorHSV(lform1() * 360, 1,1);
         } else {
-          g.setColorHSV(lform2() * 255, 1,1);
+          g.setColorHSV(lform2() * 360, 1,1);
         }
        g.drawLine(0,i,WIDTH,i);
       }
@@ -311,9 +313,9 @@ addPattern(
      for(i=0; i<HEIGHT;i++) {
         for(j=0; j<WIDTH;j++) {
           if ((i+j)%2) {
-            g.setColorHSV(lform1() * 255, 1,1);
+            g.setColorHSV(lform1() * 360, 1,1);
           } else {
-            g.setColorHSV(lform2() * 255, 1,1);
+            g.setColorHSV(lform2() * 360, 1,1);
           }
           g.drawLine(i,j,i,j);
         }
@@ -331,7 +333,7 @@ addPattern(
       "compiled";
       pos = lfor112();
       for (i = 0; i< WIDTH; i++) {
-        g.setColorHSV(lfor11() * 255, 1, 1.5 - (Math.abs(i - pos)));
+        g.setColorHSV(lfor11() * 360, 1, 1.5 - (Math.abs(i - pos)));
         g.drawLine(0, i, HEIGHT, i);
       }
     },
@@ -342,7 +344,7 @@ addPattern(
 ));
 
 addPattern(new Pattern("cylon", 10, function() {
-  g.setBgColorHSV(lfor11()*255, 1,1);
+  g.setBgColorHSV(lfor11()*360, 1,1);
   g.clear();
 }));
 
@@ -359,9 +361,9 @@ addPattern(new Pattern('distorG', 30,
     var m = pt1();
     var x = m[0];
     var y = m[1];
-    g.setColorHSV((1 - lfor11()) * 255, 1, 0.5);
+    g.setColorHSV((1 - lfor11()) * 360, 1, 0.5);
     g.fillRect(x-1, y-1, x+1, y+1);
-    g.setColorHSV(lfor11() * 255, 1, 1);
+    g.setColorHSV(lfor11() * 360, 1, 1);
     g.fillRect(x ,y , x , y);
 }));
 
@@ -418,9 +420,10 @@ addPattern(new Pattern('distor', 1, function() {
 }));
 
 addPattern(new Pattern('Candle', 1, function() {
-  for (var y=0; y < HEIGHT; y++) {
-    for (var x=0; x < WIDTH; x++) {
-      var val = (g.getPixel(x,y) + (Math.random()-1));
+  "compiled";
+  for (var y = 0; y < HEIGHT; y++) {
+    for (var xyell = 0; x < WIDTH; x++) {
+      var val = (g.getPixel(x,y) + (Math.random() * 10 - 5));
       g.setPixel(x,y,yellow(val));
     }
   }
@@ -529,7 +532,7 @@ function changePattern(p) {
     g.setColor(255);
   }
   //g.drawString(patN+1, 1,0);
-  draw();
+  g.flip();
   tick=0;
   // In half secs resets
   setTimeout(function() {
@@ -544,13 +547,9 @@ function cp(p) { changePattern(p); }
 function loop() {
 //  g.clear();
   runPattern();
-  draw();
+  g.flip();
   tick++;
   schedule();
-}
-
-function draw() {
-  SPI1.send4bit(g.buffer, 0b0001, 0b0011);
 }
 
 function schedule() {
@@ -559,33 +558,4 @@ function schedule() {
 
 loop();
 
-//setInterval(doLights, patterns[patN][1]);
 
-
-/*var img = [];
-
-img[0] = {
-  width : 5, height : 5, bpp : 24,
-  //transparent : 0,
-  buffer : E.toArrayBuffer(atob("JiQAvbYA//0A1M0ARUMAvbYA//0A//gA//kA5t4A//0A//gA/vUA//cA//8A1M0A//oA//cA//cA9ewARUIA5t4A//8A9ewAcGwA"))
-};
-
-img[1] = {
-  width : 5, height : 5, bpp : 24,
-  //transparent : 0,
-  buffer : E.toArrayBuffer(atob("NjQAY2AAAAAAUlAAS0gAycEA4dkAPjwCt7AB+fAA//0A//kA3dUB7+YA//8A1MwA//sA//8A//sA9OsARUIA5t0A//8A9OwAcGwA"))
-};
-
-img[2] = {
-  width : 5, height : 5, bpp : 24,
-  //transparent : 0,
-  buffer : E.toArrayBuffer(atob("ExIABAQAAAAAAAAAGRkAurMAgn0BAAAAV1QB2NEB//8A/PMAq6UB598A//8A08wA//0A//8A//0A8+sARUIA5d0A//8A9OsAcGwA"))
-};
-
-// Hope just copies
-img[3] = img[1];
-
-addPattern('pacman', 150, function() {
-  g.drawImage(img[tick++ % 4]);
-});
-*/
