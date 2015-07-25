@@ -4,32 +4,17 @@ var WIDTH = 5;
 var HEIGHT = 5;
 var PSIZE = WIDTH * HEIGHT;
 
-var g = Graphics.createArrayBuffer(WIDTH,
-                                   HEIGHT,
-                                   24, { zigzag: true });
-g.flip = function() { SPI1.send4bit(g.buffer, 0b0001, 0b0011); };
+var g = Graphics.createArrayBuffer(WIDTH,HEIGHT,24, { zigzag: true });
+g.flip = function(){SPI1.send4bit(g.buffer,1,3);};
 
-var gswap = Graphics.createArrayBuffer(WIDTH,
-                                       HEIGHT,
-                                       24, { zigzag: true });
+var gswap = Graphics.createArrayBuffer(WIDTH,HEIGHT,24, { zigzag: true });
 var patterns = [];
 var tick = 0;
-
-// Returns color wheel thing based on wpos (0..255)
-function wheel(wpos) {
-  if (wpos < 86) {
-    return (wpos * 3) + ((256 - wpos * 3) << 8) + (0 << 16);
-  } else if (wpos < 170) {
-    return (255 - wpos * 3) + (0 << 8) + (wpos * 3 << 16);
-  } else {
-    return 0 + (wpos * 3 << 8) + ((255 - wpos * 3) << 16);
-  }
-}
-
-// A random integer betwen min and max, taken from mdn
+// Taken from mdn
 function getRandomInt(min, max) {
+  "compiled";
   max++;
-  return Math.floor(Math.random() * (max - min)) + min;
+  return(Math.floor(Math.random() * (max - min)) + min);
 }
 // A pattern is what this thing does; Has optional init, if set does that
 // upon switching instead of clearing etc.
@@ -39,63 +24,64 @@ function Pattern(name, period, fun, init) {
   this.init = init;
   this.f = fun;
 }
-
 function addPattern(pat) {
   patterns.push(pat);
   console.log("Added pattern: " + pat.name);
 }
-
-// Probably, red, green, blue
+// Some cols
 var mcolors = [255, 255<<8, 255<<16, 37373737, 637373731, 100*255+20+100*64000];
-// Does a random rectangle in one of the above colors
+// Does a random rect in one of the above colors
 function rndRect() {
-  g.setColor(mcolors[getRandomInt(0,mcolors.length - 1)]);
-  g.fillRect(getRandomInt(0,WIDTH),
-             getRandomInt(0,HEIGHT),
-             getRandomInt(0,WIDTH),
-             getRandomInt(0,HEIGHT));
+  "compiled";
+  g.setColor(mcolors[getRandomInt(0, mcolors.length - 1)]);
+  g.fillRect(getRandomInt(0,WIDTH), getRandomInt(0,HEIGHT), getRandomInt(0,WIDTH), getRandomInt(0,HEIGHT));
 }
-
 // A grey at this level - expects 0-255
-function grey(level) {
+function white(level) {
   return level | (level << 8) | (level << 16);
 }
 // A yellow at this level - expect 0-255
 function yellow(level) {
+  "compiled";
   return level | level << 8;
 }
-
 // 2d distance
 function dist(x1,y1,x2,y2) {
-//  "compiled";
-  return Math.sqrt(Math.pow(x2-x1,2) +
-                   Math.pow(y2-y1,2));
+  "compiled";
+  return Math.sqrt(Math.pow(x2-x1,2) + Math.pow(y2-y1,2));
 }
-
 // Torna un lfo() che fa un ciclo completo ogni period iterazioni.
-// L'lfo torna un float fra -1 e 1
-// Usa una globale tick
-function Lfo(period, phase) {
-  if (!phase) phase = 0;
+// L'lfo torna un float fra -1 e 1, usa una globale tick
+function Lfo(period, p) {
+  if (!p) p = 0;
+  var m = 2 * Math.PI / period;
   return function() {
     "compiled";
-    return Math.sin(tick * ( (2*Math.PI)/period) + phase);
+    return Math.sin(tick*m+p);
   };
 }
-
 function Oscil(period, phase) {
   if (!phase) phase = 0;
   return function(theta) {
     "compiled";
-    return Math.sin((tick/10 + theta) * ((2*Math.PI)/period) + phase);
+    return Math.sin((tick/10+theta)*((2*Math.PI)/period)+phase);
   };
 }
-// Moltiplica il risultato di fun in modo da ottenera una cosa fra in e max; Davvero?
-function Range(fun, min, max) {
+// Returns a function that goes from 0 to 1.0 in [int] cycles
+function Phasor(cycles) {
+  var d = 1.0/cycles;
+  return function() {
+    "compiled";
+    return (tick % cycles) * d;
+  };
+}
+// Moltiplica il risultato di fun in modo da
+// ottenere una cosa fra min e max; Davvero?
+function Range(f, min, max) {
   var mid = Math.abs((max - min)) / 2;
   return function() {
     "compiled";
-    return fun() * mid + mid;
+    return f()*mid+mid;
   };
 }
 
@@ -146,46 +132,12 @@ function bluePx(x,y) {
   if (v < 0) return 0;
   return v;
 }
-// Returns a function that goes from 0 to 1.0
-// in [int] cycles
-function Phasor(cycles) {
-  var divisor = 1.0/cycles;
-  return function() {
-    "compiled";
-    return (tick % cycles) * divisor;
-  };
-}
-
-/*function HSVtoRGB(h, s, v) {
-    var r, g, b, i, f, p, q, t;
-    if (h && s === undefined && v === undefined) {
-        s = h.s, v = h.v, h = h.h;
-    }
-    i = Math.floor(h * 6);
-    f = h * 6 - i;
-    p = v * (1 - s);
-    q = v * (1 - f * s);
-    t = v * (1 - (1 - f) * s);
-    switch (i % 6) {
-        case 0: r = v, g = t, b = p; break;
-        case 1: r = q, g = v, b = p; break;
-        case 2: r = p, g = v, b = t; break;
-        case 3: r = p, g = q, b = v; break;
-        case 4: r = t, g = p, b = v; break;
-        case 5: r = v, g = p, b = q; break;
-    }
-    return Math.floor(r * 255) |
-           Math.floor(g * 255) << 8 |
-           Math.floor(b * 255) << 16;
-}
-*/
 
 var lfor11 = new Range(new Lfo(3000, Math.PI), 0, 1);
 var lfor112 = new Range(new Lfo(25000), -4, 0);
 var lfor12 = new Range(new Lfo(100,Math.PI/8), 0, 1);
 var lfor13 = new Range(new Lfo(100,Math.PI/4), 0, 1);
 var lfor14 = new Range(new Lfo(100), 1, 3);
-
 var lform1 = new Range(new Lfo(1000), 0, 1);
 var lform2 = new Range(new Lfo(1000, Math.PI), 0, 1);
 var osc1 = new Oscil(7);
@@ -193,182 +145,121 @@ var osc2 = new Oscil(11);
 var osc3 = new Oscil(23);
 var osc4 = new Oscil(10000);
 var pha1 = new Phasor(1000);
-addPattern(
-  new Pattern("gradients",
-   1,
-    function() {
-      "compiled";
-      for (var x=0; x< WIDTH; x++) {
-        for (var y=0; y< HEIGHT; y++) {
-          var pv = pha1()*360;
-          g.setColorHSV(pv, 1,1);
-          g.drawRect(x,y,x,y);
-        }
-      }
-    }
-  )
-);
-
-addPattern(
-  new Pattern("Bars",
-    10,
-    function() {
-      for(var i=0; i<WIDTH; i++) {
-        g.setColor(grey((Math.sin(tick / i / Math.PI)+1)* 127));
-        g.drawLine(i,0,i,HEIGHT);
-      }
-    }
-  )
-);
-
-
-addPattern(
-  new Pattern("Sinusite",
-    1,
-    function() {
-    for (i=0; i<WIDTH*HEIGHT;i++) {
-      var ri = i*3;
-      g.buffer[ri  ] = (osc1(i) + 1 ) * 127;
-      g.buffer[ri+1] = (osc2(i) + 1 ) * 127;
-      g.buffer[ri+2] = (osc3(i) + 1 ) * 127;
-    }
-  })
-);
-
-addPattern(
-  new Pattern("TextEr",
-    20,
-    function() {
-      var str = "DIO CANE BAFANGULO PORCODIO";
-      g.setColorHSV(Math.round(lform1() * 360), 1, 1);
-      g.setBgColorHSV(Math.round(lform2() * 360), 1, 1);
-      g.clear();
-      var idx = Math.round((tick/30)) % str.length;
-      g.drawString(str[idx], 0,0);
-    },
-    function() {
-      //g.setFontVector(5);
-    }
-  )
-);
-
-addPattern(
-  new Pattern("just-on",
-    100,
-    function() {
-       var o = g.getBgColor() + 1;
-      g.setBgColor(o,o,o);
-      g.clear();
-    }
-));
-
-addPattern(
-  new Pattern("mlines",
-    1,
-    function() {
-      "compiled";
-      var cnt = tick%25;
-      g.setPixel(cnt/5, cnt%5, lform1() * 255*2*133.3);
-  }
-));
-
-addPattern(
-  new Pattern("mesme",
-    10,
-    function() {
-      "compiled";
-      for(i=0; i<WIDTH;i++) {
-        if (i%2) {
-          g.setColorHSV(lform1() * 360, lfo2() + 1,lfo1()+1.5);
-        } else {
-          g.setColorHSV(lform2() * 360, lfo1() + 1,lfo2()+1.5);
-        }
-       g.drawLine(i,0,i,HEIGHT);
-      }
-    },
-    function() { return true; }
-));
-
-addPattern(
-  new Pattern("mesme2",
-    10,
-    function() {
-      for(i=0; i<HEIGHT;i++) {
-        if (i%2) {
-          g.setColorHSV(lform1() * 360, 1,1);
-        } else {
-          g.setColorHSV(lform2() * 360, 1,1);
-        }
-       g.drawLine(0,i,WIDTH,i);
-      }
-    },
-    function() { return true; }
-));
-
-addPattern(
-  new Pattern("mesme3",
-    1,
-    function() {
-     "compiled";
-     for(i=0; i<HEIGHT;i++) {
-        for(j=0; j<WIDTH;j++) {
-          if ((i+j)%2) {
-            g.setColorHSV(lform1() * 360, 1,1);
-          } else {
-            g.setColorHSV(lform2() * 360, 1,1);
-          }
-          g.drawLine(i,j,i,j);
-        }
-      }
-    },
-    function() { return true; }
-));
-
-
-
-addPattern(
-  new Pattern("lines",
-    1,
-    function() {
-      "compiled";
-      pos = lfor112();
-      for (i = 0; i< WIDTH; i++) {
-        g.setColorHSV(lfor11() * 360, 1, 1.5 - (Math.abs(i - pos)));
-        g.drawLine(0, i, HEIGHT, i);
-      }
-    },
-    function() {
-      g.setBgColor(getRandomInt(0, 255),
-                   getRandomInt(0, 255),
-                   getRandomInt(0, 255));                     }
-));
-
-addPattern(new Pattern("cylon", 10, function() {
-  g.setBgColorHSV(lfor11()*360, 1,1);
+var lfol1 = new Lfo(50,0);
+var lfol2 = new Lfo(50, Math.PI /2);
+var MULT = 3;
+var OFF = 2.5;
+addPattern(new Pattern("nothing",1,function() {
+  g.buffer[getRandomInt(0,75)] = getRandomInt(0,255);
+}));
+addPattern(new Pattern("line",1,function() {
+  "compiled";
+  g.setBgColorHSV((1 - pha1()) * 360, 1, 0.2);
   g.clear();
+  g.setColorHSV(pha1() * 360,1,1);
+  g.drawLine(lfol1() * MULT + OFF,lfol2() * MULT + OFF,-lfol1() * MULT + OFF,-lfol2() * MULT + OFF);
 }));
 
-addPattern(new Pattern("SoftPx", 1,
-  function() {
-    g.setBgColor(grey(lfor1()/5));
-    g.clear();
+addPattern(new Pattern("line2",1,function() {
+  "compiled";
+  g.setColorHSV(pha1() * 360,1,1);
+  g.drawLine(lfol1() * MULT + OFF,lfol2() * MULT + OFF,-lfol1() * MULT + OFF,-lfol2() * MULT + OFF);
+}));
+
+addPattern(new Pattern("Bars",1,function() {
+  for(var i=0; i<WIDTH; i++) {
+    g.setColor(white((Math.sin(tick / i / Math.PI)+1)* 127));
+    g.drawLine(i,0,i,HEIGHT);
+  }
+}));
+
+addPattern(new Pattern("Sinusite",1,function() {
+  for (var i=0; i<WIDTH*HEIGHT;i++) {
+    var ri = i*3;
+    g.buffer[ri  ] = (osc1(i) + 1 ) * 127;
+    g.buffer[ri+1] = (osc2(i) + 1 ) * 127;
+    g.buffer[ri+2] = (osc3(i) + 1 ) * 127;
+  }
+}));
+
+addPattern(new Pattern("TextEr",1,function() {
+  var str = "DIO CANE BAFANGULO PORCODIO";
+  g.setColorHSV(lform1() * 360, 1, 1);
+  g.setBgColorHSV(lform2() * 360, 1, 1);
+  g.clear();
+  var idx = Math.round((tick/30)) % str.length;
+  g.drawString(str[idx], 0,0);
+},
+function() {
+//g.setFontVector(5);
+}));
+
+addPattern(new Pattern("mlines",1,function() {
+  "compiled";
+  var cnt = tick%25;
+  g.setPixel(cnt/5, cnt%5, lform1() * 255*2*133.3);
+}));
+
+addPattern(new Pattern("mesme",1,function() {
+  "compiled";
+  for(var i=0; i<WIDTH;i++) {
+    if (i%2)
+     g.setColorHSV(lform1() * 360, lfo2() + 1,lfo1()+1.5);
+    else
+      g.setColorHSV(lform2() * 360, lfo1() + 1,lfo2()+1.5);
+    g.drawLine(i,0,i,HEIGHT);
+  }
+}));
+
+addPattern(new Pattern("mesme2",1,function() {
+  for(var i=0; i<HEIGHT;i++) {
+    if (i%2)
+      g.setColorHSV(lform1() * 360, 1,1);
+    else
+      g.setColorHSV(lform2() * 360, 1,1);
+    g.drawLine(0,i,WIDTH,i);
+  }
+}));
+
+addPattern(new Pattern("mesme3",1,function() {
+  "compiled";
+  for(var i=0; i<HEIGHT;i++) {
+    for(var j=0; j<WIDTH;j++) {
+      if ((i+j)%2)
+        g.setColorHSV(lform1() * 360, 1,1);
+      else
+        g.setColorHSV(lform2() * 360, 1,1);
+      g.drawLine(i,j,i,j);
+    }
+  }
+}));
+
+addPattern(new Pattern("lines",1,function() {
+  "compiled";
+  var pos = lfor112();
+  for (var i = 0; i< WIDTH; i++) {
+    g.setColorHSV(lfor11() * 360, 1, 1.5 - (Math.abs(i - pos)));
+    g.drawLine(0, i, HEIGHT, i);
+  }
+},
+function() {
+g.setBgColor(getRandomInt(0, 255), getRandomInt(0, 255), getRandomInt(0, 255));
 }));
 
 // Does a square that changes color slowly.
-addPattern(new Pattern('distorG', 30,
-  function() {
-    g.clear();
-    var m = pt1();
-    var x = m[0];
-    var y = m[1];
-    g.setColorHSV((1 - lfor11()) * 360, 1, 0.5);
-    g.fillRect(x-1, y-1, x+1, y+1);
-    g.setColorHSV(lfor11() * 360, 1, 1);
-    g.fillRect(x ,y , x , y);
+addPattern(new Pattern('distorG', 1,function() {
+  g.clear();
+  var m = pt1();
+  var x = m[0];
+  var y = m[1];
+  g.setColorHSV((1 - lfor11()) * 360, 1, 0.5);
+  g.fillRect(x-1, y-1, x+1, y+1);
+  g.setColorHSV(lfor11() * 360, 1, 1);
+  g.fillRect(x ,y , x , y);
 }));
 
 // Tipo randomcross ma con drawLine.. molto piu' veloce!
-addPattern(new Pattern("Randvar", 30, function() {
+addPattern(new Pattern("Randvar", 1, function() {
   var onx = getRandomInt(0,WIDTH);
   g.setColor(255);
   g.drawLine(onx, 0, onx, HEIGHT);
@@ -399,7 +290,7 @@ addPattern(new Pattern("RandomCross", 1, function() {
 }));
 
 // Ogni 100 iter fa 4 rects random
-addPattern(new Pattern("Mondrian", 500, function() {
+addPattern(new Pattern("Mondrian", 1, function() {
   g.setBgColor(mcolors[getRandomInt(0,3)]);
   for (var i=0; i < 5; i++) {
     rndRect();
@@ -411,44 +302,19 @@ addPattern(new Pattern('distor', 1, function() {
   "compiled";
   for (var y=0; y < HEIGHT; y++) {
     for (var x=0; x < WIDTH; x++)
-      g.setPixel(x,
-                 y,
-                 redPx(x,y) |
-                 greenPx(x,y) << 8 |
-                 bluePx(x, y) << 16);
+      g.setPixel(x,y,redPx(x,y)|greenPx(x,y) << 8 |bluePx(x, y) << 16);
   }
 }));
 
 addPattern(new Pattern('Candle', 1, function() {
   "compiled";
   for (var y = 0; y < HEIGHT; y++) {
-    for (var xyell = 0; x < WIDTH; x++) {
+    for (var x = 0; x < WIDTH; x++) {
       var val = (g.getPixel(x,y) + (Math.random() * 10 - 5));
-      g.setPixel(x,y,yellow(val));
+      g.setPixel(x,y,white(val));
     }
   }
 }));
-
-addPattern(new Pattern("Random bg", 333, function() {
-  g.setBgColor(Math.random(),
-               Math.random(),
-               Math.random());
-}));
-
-/*
-addPattern(new Pattern("Neon turn on", 10, function() {
-  for (var i = 0; i< WIDTH*HEIGHT; i++) {
-    var px;
-    if (Math.random > 0.6)
-      px = String.fromCharCode(255);
-    else
-      px = String.fromCharCode(0);
-    cols+=px + px +px;
-    g.buffer = cols;
-  }
-}));
-*/
-
 function updateFireField() {
   gswap.clear();
   for (var y = 0; y < HEIGHT; y++) {
@@ -458,11 +324,9 @@ function updateFireField() {
       gswap.setPixel(x,y,h);
     }
   }
-
-  for (var p = 0; p < 5; p++) {
+  for (var p = 0; p < 5; p++)
     gswap.setPixel(p, 4, 0);
-  }
-  tmp = g.buffer;
+  var tmp = g.buffer;
   g.buffer = gswap.buffer;
   gswap.buffer = tmp;
 }
@@ -473,10 +337,8 @@ var calculateSumOfSurroundingPixels = function(x, y) {
     sum += g.getPixel(x-1, y+1);
     sum += g.getPixel(x-1, y);
   }
-
   sum += g.getPixel(x, y + 1);
   sum += g.getPixel(x,y);
-
   if (x < 4) {
     sum += g.getPixel(x+1, y + 1);
     sum += g.getPixel(x+1, y);
@@ -497,8 +359,9 @@ function htocol(lum) {
   if (lum < 200) return lum + (lum/2 << 8) + (lum/2 << 16);
   return lum + (lum << 8) + (lum << 16);
 }
+
 // Fuochetto.. con la palette spaccherebbe!
-addPattern(new Pattern("FireTry", 50, function() {
+addPattern(new Pattern("FireTry", 1, function() {
   updateFireField();
   for (var i = 0; i<WIDTH; i++) {
     var lum = getRandomInt(0, 255);
@@ -508,22 +371,16 @@ addPattern(new Pattern("FireTry", 50, function() {
 
 // Done with patterns, define machine to run them
 var patN = 0;
-function runPattern() {
-  patterns[patN].f();
-}
+function runPattern() {patterns[patN].f();}
 
 function changePattern(p) {
-  clearTimeout();
+  clearInterval();
   if (p) {
     patN = p;
   } else {
     patN = (patN + 1) % patterns.length;
   }
-  console.log("Selecting pattern %i: %s",
-              patN,
-              patterns[patN].name);
-  clearInterval();
-  //g.clear();
+  console.log("Selecting pattern ", patN, ':', patterns[patN].name);
   if (patterns[patN].init) {
     console.log("Custom init!");
     patterns[patN].init();
@@ -532,30 +389,39 @@ function changePattern(p) {
     g.setColor(255);
   }
   //g.drawString(patN+1, 1,0);
-  g.flip();
+  //g.flip();
   tick=0;
   // In half secs resets
   setTimeout(function() {
     console.log("Starting!");
-    loop();
-  }, 500);
+    setInterval(loop,1);
+  }, 200);
 }
+
+var timer = function(name) {
+  var start = new Date();
+  return {
+    stop: function() {
+      var end  = new Date();
+      var time = end.getTime() - start.getTime();
+      console.log('finished in', time, 'ms', " - ", 1000/time*100, " fps");
+    }
+  };
+};
 
 setWatch(changePattern, BTN, { repeat: true, edge:'falling' });
 function cp(p) { changePattern(p); }
 
 function loop() {
-//  g.clear();
   runPattern();
   g.flip();
   tick++;
-  schedule();
+  if ((tick % 1000) === 0) {
+    t.stop();
+    t = timer('last1000');
+  }
 }
 
-function schedule() {
-  setTimeout(loop, patterns[patN].period);
-}
+setInterval(loop,1);
 
-loop();
-
-
+var t = timer('Last1000');
