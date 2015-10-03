@@ -1,9 +1,12 @@
-// Synthesizer thing with SpeakJet. Needs work, and I must work out if it does
-// something different/worthwhile from speakjet.js
+// Synthesizer thing with SpeakJet on serial1;
+// Has a bunch of encoders whith leds for the interface.
+// Old mode sends all at once, new one sends a phoneme at a time.
+
 var retriggering = false;
-var s = Serial1;
+var s = Serial1; // Should be A9?
 var leds = [C3,C2,C0,C15,B12,B9,B7,B6,B4,B3];
 var switches = [C1,C12,B8,B5,B2];
+var enc = require("Encoder");
 var global = {
   volume: 96,
   speed: 114,
@@ -119,7 +122,8 @@ function randomize() {
 }
 
 function encfactory(left, right, pos) {
-  var e = new Encoder(left, right, function(direction) {
+  console.log("Setting a watch on " + left + ' and ' + right + ' on ' + pos);
+  var e = enc.connect(left, right, function(direction) {
     changeAryFunc()(pos, direction);
     printNotes();
   });
@@ -137,11 +141,11 @@ function showNote(i) {
         phrase[i].pause);
 }
 
-encfactory(C9,  C10, 0);
-encfactory(C7,  C8,  1);
-encfactory(C5,  C6,  2);
-encfactory(B15, C4,  3);
-encfactory(B13, B14, 4);
+encfactory(C10,  C9, 0);
+encfactory(C8,  C7,  1);
+encfactory(C6,  C5,  2);
+encfactory(C4, B15, 3);
+encfactory(B14, B13, 4);
 
 function mybtnWatch() {
   changeAryPos += 1;
@@ -167,6 +171,25 @@ function playNow() {
   clearInterval();
   play();
   setInterval(play, 3000);
+}
+var gPos = 0;
+function playStep() {
+  digitalWrite(leds[gPos*2], 1);
+  digitalWrite(leds[gPos*2 + 1], 1);
+
+  var note = phrase[gPos];
+    if (note.fast) {
+      s.write(7);
+    } else if (note.slow) {
+      s.write(8);
+    }
+    //s.write(note.pause);
+    s.write(note.note);
+    gPos++;
+    if (gPos > 3)
+      gPos = 0;
+  setTimeout(drawLeds, 400);
+  setTimeout(playStep, 500);
 }
 
 function play() {

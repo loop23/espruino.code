@@ -1,3 +1,5 @@
+// Try using midi to drive the speakjet on serial1
+// Does not work, yet.
 var midi = require('Midi').setup(Serial2, 115200);
 var sj = Serial1;
 sj.setup(9600, {tx: B6});
